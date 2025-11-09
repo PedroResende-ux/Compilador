@@ -1,6 +1,3 @@
--- Main.hs
--- Programa principal do compilador Ada
-
 module Main where
 
 import System.Environment (getArgs)
@@ -9,84 +6,142 @@ import Lexer
 import Parser
 import AST
 
--- Função para imprimir a AST de forma legível
-prettyPrint :: Program -> String
-prettyPrint (Program stmts) = 
-  "Program:\n" ++ concatMap (\s -> "  " ++ ppStmt s 1 ++ "\n") stmts
+printTree :: Program -> String
+printTree (Program stmts) = 
+  "Program\n" ++ concatMap (printStmt 1) stmts
 
-ppStmt :: Stmt -> Int -> String
-ppStmt stmt indent = case stmt of
-  Assignment var expr -> 
-    replicate (indent*2) ' ' ++ var ++ " := " ++ ppExpr expr
-  
-  IfThenElse cond thenStmt elseStmt ->
-    replicate (indent*2) ' ' ++ "if " ++ ppExpr cond ++ " then\n" ++
-    ppStmt thenStmt (indent+1) ++ "\n" ++
-    replicate (indent*2) ' ' ++ "else\n" ++
-    ppStmt elseStmt (indent+1)
-  
-  IfThen cond thenStmt ->
-    replicate (indent*2) ' ' ++ "if " ++ ppExpr cond ++ " then\n" ++
-    ppStmt thenStmt (indent+1)
-  
-  While cond body ->
-    replicate (indent*2) ' ' ++ "while " ++ ppExpr cond ++ " loop\n" ++
-    ppStmt body (indent+1) ++ "\n" ++
-    replicate (indent*2) ' ' ++ "end loop"
-  
-  Block stmts ->
-    replicate (indent*2) ' ' ++ "begin\n" ++
-    concatMap (\s -> ppStmt s (indent+1) ++ "\n") stmts ++
-    replicate (indent*2) ' ' ++ "end"
-  
-  PutLine expr ->
-    replicate (indent*2) ' ' ++ "Put_Line(" ++ ppExpr expr ++ ")"
-  
-  EmptyStmt -> replicate (indent*2) ' ' ++ "<empty>"
+printStmt :: Int -> Stmt -> String
+printStmt level stmt = 
+  let indent = replicate (level * 2) ' '
+      branch = "├─ "
+  in case stmt of
+    Assignment var expr -> 
+      indent ++ branch ++ "Assignment\n" ++
+      indent ++ "  ├─ Variable: " ++ var ++ "\n" ++
+      indent ++ "  └─ " ++ printExpr (level + 1) expr
+    
+    IfThenElse cond thenStmt elseStmt ->
+      indent ++ branch ++ "IfThenElse\n" ++
+      indent ++ "  ├─ Condition: " ++ printExpr (level + 1) cond ++
+      indent ++ "  ├─ Then:\n" ++ printStmt (level + 2) thenStmt ++
+      indent ++ "  └─ Else:\n" ++ printStmt (level + 2) elseStmt
+    
+    IfThen cond thenStmt ->
+      indent ++ branch ++ "IfThen\n" ++
+      indent ++ "  ├─ Condition: " ++ printExpr (level + 1) cond ++
+      indent ++ "  └─ Then:\n" ++ printStmt (level + 2) thenStmt
+    
+    While cond body ->
+      indent ++ branch ++ "While\n" ++
+      indent ++ "  ├─ Condition: " ++ printExpr (level + 1) cond ++
+      indent ++ "  └─ Body:\n" ++ printStmt (level + 2) body
+    
+    Block stmts ->
+      indent ++ branch ++ "Block\n" ++
+      concatMap (printStmt (level + 1)) stmts
+    
+    PutLine expr ->
+      indent ++ branch ++ "PutLine\n" ++
+      indent ++ "  └─ " ++ printExpr (level + 1) expr
+    
+    EmptyStmt -> 
+      indent ++ branch ++ "EmptyStmt\n"
 
-ppExpr :: Expr -> String
-ppExpr expr = case expr of
-  IntLit n -> show n
-  BoolLit b -> show b
-  StringLit s -> "\"" ++ s ++ "\""
-  Var v -> v
-  Add e1 e2 -> "(" ++ ppExpr e1 ++ " + " ++ ppExpr e2 ++ ")"
-  Sub e1 e2 -> "(" ++ ppExpr e1 ++ " - " ++ ppExpr e2 ++ ")"
-  Mul e1 e2 -> "(" ++ ppExpr e1 ++ " * " ++ ppExpr e2 ++ ")"
-  Div e1 e2 -> "(" ++ ppExpr e1 ++ " / " ++ ppExpr e2 ++ ")"
-  Mod e1 e2 -> "(" ++ ppExpr e1 ++ " mod " ++ ppExpr e2 ++ ")"
-  Neg e -> "(-" ++ ppExpr e ++ ")"
-  And e1 e2 -> "(" ++ ppExpr e1 ++ " and " ++ ppExpr e2 ++ ")"
-  Or e1 e2 -> "(" ++ ppExpr e1 ++ " or " ++ ppExpr e2 ++ ")"
-  Not e -> "(not " ++ ppExpr e ++ ")"
-  Eq e1 e2 -> "(" ++ ppExpr e1 ++ " = " ++ ppExpr e2 ++ ")"
-  Neq e1 e2 -> "(" ++ ppExpr e1 ++ " /= " ++ ppExpr e2 ++ ")"
-  Lt e1 e2 -> "(" ++ ppExpr e1 ++ " < " ++ ppExpr e2 ++ ")"
-  Lte e1 e2 -> "(" ++ ppExpr e1 ++ " <= " ++ ppExpr e2 ++ ")"
-  Gt e1 e2 -> "(" ++ ppExpr e1 ++ " > " ++ ppExpr e2 ++ ")"
-  Gte e1 e2 -> "(" ++ ppExpr e1 ++ " >= " ++ ppExpr e2 ++ ")"
-  GetLine -> "Get_Line"
+printExpr :: Int -> Expr -> String
+printExpr level expr = 
+  let indent = replicate (level * 2) ' '
+  in case expr of
+    IntLit n -> "IntLit: " ++ show n ++ "\n"
+    BoolLit b -> "BoolLit: " ++ show b ++ "\n"
+    StringLit s -> "StringLit: \"" ++ s ++ "\"\n"
+    Var v -> "Var: " ++ v ++ "\n"
+    
+    Add e1 e2 -> 
+      "Add\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Sub e1 e2 -> 
+      "Sub\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Mul e1 e2 -> 
+      "Mul\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Div e1 e2 -> 
+      "Div\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Mod e1 e2 -> 
+      "Mod\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Neg e -> 
+      "Neg\n" ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e
+    
+    And e1 e2 -> 
+      "And\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Or e1 e2 -> 
+      "Or\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Not e -> 
+      "Not\n" ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e
+    
+    Eq e1 e2 -> 
+      "Eq\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Neq e1 e2 -> 
+      "Neq\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Lt e1 e2 -> 
+      "Lt\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Lte e1 e2 -> 
+      "Lte\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Gt e1 e2 -> 
+      "Gt\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    Gte e1 e2 -> 
+      "Gte\n" ++
+      indent ++ "  ├─ " ++ printExpr (level + 1) e1 ++
+      indent ++ "  └─ " ++ printExpr (level + 1) e2
+    
+    GetLine -> "GetLine\n"
 
 main :: IO ()
 main = do
   args <- getArgs
   input <- case args of
-    [] -> getContents  -- lê da entrada padrão
-    (filename:_) -> readFile filename  -- lê do ficheiro
+    [] -> getContents  
+    (filename:_) -> readFile filename 
   
   -- Análise léxica
   let tokens = alexScanTokens input
   
-  putStrLn "=== TOKENS ==="
-  mapM_ print tokens
-  putStrLn ""
-  
   -- Análise sintática
   let ast = parse tokens
   
-  putStrLn "=== ABSTRACT SYNTAX TREE ==="
-  putStrLn $ prettyPrint ast
-  putStrLn ""
-  
-  putStrLn "=== HASKELL AST REPRESENTATION ==="
-  print ast
+  putStrLn $ printTree ast
