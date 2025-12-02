@@ -145,3 +145,17 @@ main = do
   let ast = parse tokens
   
   putStrLn $ printTree ast
+
+
+generateTACExpr :: Expr -> Int -> ([TAC], String, Int)
+generateTACExpr (IntLit n) tempCount =
+    ([], show n, tempCount)  -- Literals directly return themselves
+
+generateTACExpr (Add e1 e2) tempCount =
+    let
+        (tac1, res1, tempCount1) = generateTACExpr e1 tempCount
+        (tac2, res2, tempCount2) = generateTACExpr e2 tempCount1
+        tempVar = "t" ++ show tempCount2
+        currTAC = BinOp tempVar res1 res2 "Add"
+    in
+        (tac1 ++ tac2 ++ [currTAC], tempVar, tempCount2 + 1)
