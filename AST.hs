@@ -50,3 +50,14 @@ data Expr =
     -- Input
   | GetLine                            -- Get_Line
   deriving (Show, Eq)
+
+--TAC
+
+data TAC =
+    Assign String String                   -- x := y (Direct Assignment)
+  | BinOp String String String String      -- x := y op z (e.g., "Add", "Sub")
+  | UnOp String String String              -- x := op y (e.g., "Neg")
+  | Goto String                            -- goto label
+  | Ifz String String                      -- ifz x goto label (Conditional Jump)
+  | Label String                           -- label: (Control Flow Marker)
+  deriving (Show, Eq)
