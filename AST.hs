@@ -102,20 +102,21 @@ enterScope (SymbolTable scopes level) =
 
 -- Exit current scope (e.g., end block)
 exitScope :: SymbolTable -> SymbolTable
+exitScope (SymbolTable [] _) = error "Cannot exit global scope - symbol table corrupted"
+exitScope (SymbolTable [_] 0) = error "Cannot exit global scope"
 exitScope (SymbolTable (_:rest) level) = 
   SymbolTable rest (level - 1)
-exitScope st = st  -- Don't exit global scope
 
 -- Insert a symbol into the current scope
 -- Returns Nothing if symbol already exists in current scope, Just table otherwise
 insertSymbol :: String -> Type -> SymbolTable -> Maybe SymbolTable
+insertSymbol _ _ (SymbolTable [] _) = error "Cannot insert into empty symbol table"
 insertSymbol name typ (SymbolTable (currentScope:rest) level) =
   if Map.member name currentScope
   then Nothing  -- Symbol already declared in current scope
   else let info = SymbolInfo name typ level
            newScope = Map.insert name info currentScope
        in Just (SymbolTable (newScope:rest) level)
-insertSymbol _ _ st = Just st  -- Empty scope list (shouldn't happen)
 
 -- Lookup a symbol in all scopes (search from current to global)
 lookupSymbol :: String -> SymbolTable -> Maybe SymbolInfo
