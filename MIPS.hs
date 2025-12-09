@@ -113,11 +113,19 @@ generateMIPSInstr state (BinOp dest src1 src2 op) =
     let destReg = getRegister dest state
     in case op of
         "Add" -> 
-            if isImmediate src2
+            if isImmediate src1 && isImmediate src2
+            then let result = show ((read src1 :: Int) + (read src2 :: Int))
+                 in "  li " ++ destReg ++ ", " ++ result
+            else if isImmediate src2
             then "  addi " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ src2
+            else if isImmediate src1
+            then "  addi " ++ destReg ++ ", " ++ getRegOrImm src2 state ++ ", " ++ src1
             else "  add " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         "Sub" -> 
-            if isImmediate src2
+            if isImmediate src1 && isImmediate src2
+            then let result = show ((read src1 :: Int) - (read src2 :: Int))
+                 in "  li " ++ destReg ++ ", " ++ result
+            else if isImmediate src2
             then let negVal = show (-(read src2 :: Int))
                  in "  addi " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ negVal
             else "  sub " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
@@ -131,15 +139,21 @@ generateMIPSInstr state (BinOp dest src1 src2 op) =
             then "  mul " ++ destReg ++ ", " ++ getRegOrImm src2 state ++ ", " ++ src1
             else "  mul " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         "Div" -> 
-            let src1Reg = getRegOrImm src1 state
-                src2Reg = getRegOrImm src2 state
-            in "  div " ++ src1Reg ++ ", " ++ src2Reg ++ "\n" ++
-               "  mflo " ++ destReg
+            if isImmediate src1 && isImmediate src2
+            then let result = show ((read src1 :: Int) `div` (read src2 :: Int))
+                 in "  li " ++ destReg ++ ", " ++ result
+            else let src1Reg = getRegOrImm src1 state
+                     src2Reg = getRegOrImm src2 state
+                 in "  div " ++ src1Reg ++ ", " ++ src2Reg ++ "\n" ++
+                    "  mflo " ++ destReg
         "Mod" -> 
-            let src1Reg = getRegOrImm src1 state
-                src2Reg = getRegOrImm src2 state
-            in "  div " ++ src1Reg ++ ", " ++ src2Reg ++ "\n" ++
-               "  mfhi " ++ destReg
+            if isImmediate src1 && isImmediate src2
+            then let result = show ((read src1 :: Int) `mod` (read src2 :: Int))
+                 in "  li " ++ destReg ++ ", " ++ result
+            else let src1Reg = getRegOrImm src1 state
+                     src2Reg = getRegOrImm src2 state
+                 in "  div " ++ src1Reg ++ ", " ++ src2Reg ++ "\n" ++
+                    "  mfhi " ++ destReg
         "And" -> "  and " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         "Or" -> "  or " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         "Eq" -> 

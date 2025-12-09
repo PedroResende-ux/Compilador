@@ -10,15 +10,18 @@
 
 ## Descrição do Projeto
 
-Este projeto implementa um **compilador para um subconjunto da linguagem Ada**, conforme especificado no enunciado do Trabalho Prático 1. O compilador realiza as fases de:
+Este projeto implementa um **compilador para um subconjunto da linguagem Ada**, conforme especificado no enunciado do Trabalho Prático. O compilador realiza as seguintes fases:
 
 1. **Análise Léxica** (Lexer) - Reconhecimento de tokens
 2. **Análise Sintática** (Parser) - Construção da árvore sintática abstrata (AST)
+3. **Geração de Código Intermédio** (TAC) - Three-Address Code
+4. **Geração de Código MIPS** - Assembly para arquitetura MIPS
 
 O compilador aceita como entrada um programa Ada válido e produz como saída:
-- Lista de tokens reconhecidos
 - Árvore sintática abstrata (AST) formatada
-- Representação Haskell da AST
+- Código intermédio em formato TAC (Three-Address Code)
+- Código assembly MIPS (.asm)
+- Arquivo `.asm` compatível com o simulador MARS
 
 ---
 
@@ -165,19 +168,80 @@ data Expr =
 
 ---
 
+### 🔄 Geração de Código Intermédio (TAC)
+
+Implementada no módulo `TAC.hs`, o gerador de TAC converte a AST em código de três endereços:
+
+#### Características:
+- **Temporários automáticos:** `t0`, `t1`, `t2`, etc.
+- **Labels para controlo de fluxo:** `L0`, `L1`, `L2`, etc.
+- **Instruções suportadas:**
+  - Atribuições: `x = y`, `x = y op z`
+  - Operações: `+`, `-`, `*`, `/`, `mod`, `<`, `>`, `=`, etc.
+  - Jumps: `goto L`, `ifz x goto L`
+  - Labels: `L0:`
+
+#### Exemplo:
+Código Ada:
+```ada
+x := a + b * c;
+```
+
+TAC gerado:
+```
+  t0 = b * c
+  t1 = a + t0
+  x = t1
+```
+
+---
+
+### 🖥️ Geração de Código MIPS
+
+Implementada no módulo `MIPS.hs`, traduz TAC para assembly MIPS:
+
+#### Características:
+- **Alocação de registos:**
+  - Variáveis: `$s0`, `$s1`, `$s2`, etc.
+  - Temporários: `$t0`, `$t1`, `$t2`, etc.
+- **Instruções MIPS:**
+  - Aritméticas: `add`, `addi`, `sub`, `mul`, `div`
+  - Comparações: `slt`, `slti`, `sgt`, `seq`, `sne`
+  - Controlo: `beqz`, `j` (jump)
+  - Syscalls: output de strings e inteiros, exit
+- **Secção .data:** String literals
+- **Optimizações:** Uso de instruções imediatas quando possível
+
+#### Exemplo:
+TAC:
+```
+  t0 = b * c
+```
+
+MIPS:
+```
+  mul $t0, $s1, $s2
+```
+
+---
+
 ## Estrutura do Projeto
 
 ```
 .
-├── AST.hs              # Definição da AST
+├── AST.hs              # Definição da AST e TAC
+├── TAC.hs              # Geração de código intermédio (Three-Address Code)
+├── MIPS.hs             # Geração de código MIPS
 ├── Lexer.x             # Especificação do lexer (Alex)
 ├── Parser.y            # Especificação do parser (Happy)
 ├── Main.hs             # Programa principal
 ├── Makefile            # Automatização da compilação
-├── build.sh            # Script alternativo de compilação
-├── compilador.cabal    # Configuração Cabal (opcional)
 ├── test.ada            # Programa de teste simples
-├── test_case.ada       # Teste com case-insensitive
+├── test_arithmetic.ada # Teste de expressões aritméticas
+├── test_conditionals.ada # Teste de condicionais
+├── test_loop.ada       # Teste de ciclos
+├── test_nested.ada     # Teste de estruturas aninhadas
+├── test_comprehensive.ada # Teste completo
 └── README.md           # Este ficheiro
 ```
 
@@ -280,10 +344,29 @@ ghc -dynamic --make Main.hs -o compilador
 
 ## Como Executar
 
-### Ler programa de um ficheiro:
+### Compilar um programa Ada:
 
 ```bash
 ./compilador test.ada
+```
+
+Isto irá:
+1. Analisar o ficheiro `test.ada`
+2. Mostrar a AST (Abstract Syntax Tree)
+3. Mostrar o TAC (Three-Address Code)
+4. Mostrar o código MIPS
+5. Gerar o ficheiro `test.asm` com o código MIPS
+
+### Executar código MIPS no MARS:
+
+1. Instale o [MARS MIPS Simulator](http://courses.missouristate.edu/kenvollmar/mars/)
+2. Abra o ficheiro `.asm` gerado no MARS
+3. Execute o programa (F5)
+
+### Executar testes:
+
+```bash
+make test
 ```
 
 ### Ler da entrada padrão:
@@ -298,22 +381,57 @@ ou
 echo 'procedure Main is begin Put_Line("Hello") end Main;' | ./compilador
 ```
 
-### Executar testes:
-
-```bash
-make test
-```
-
 ---
 
 ## Saída do Compilador
 
-O compilador produz **três secções** de output:
+O compilador produz **quatro secções** de output:
 
-### 1. **TOKENS**
-Lista de todos os tokens reconhecidos pelo lexer com informações de posição:
+### 1. **ABSTRACT SYNTAX TREE**
+Representação formatada e legível da AST:
 
 ```
+=== ABSTRACT SYNTAX TREE ===
+Program
+  ├─ Assignment
+    ├─ Variable: x
+    └─ IntLit: 10
+  ├─ PutLine
+    └─ StringLit: "Hello"
+```
+
+### 2. **THREE-ADDRESS CODE**
+Código intermédio em formato TAC:
+
+```
+=== THREE-ADDRESS CODE ===
+  x = 10
+  _print = print "Hello"
+```
+
+### 3. **MIPS ASSEMBLY CODE**
+Código assembly MIPS pronto para executar:
+
+```
+=== MIPS ASSEMBLY CODE ===
+# Generated MIPS Assembly Code
+
+.data
+str0: .asciiz "Hello"
+
+.text
+.globl main
+main:
+  li $s0, 10
+  la $a0, str0
+  li $v0, 4
+  syscall
+  li $v0, 10
+  syscall
+```
+
+### 4. **Ficheiro .asm**
+O código MIPS é também guardado num ficheiro `.asm` (e.g., `test.asm`)
 === TOKENS ===
 TokenProcedure (line 1, column 1)
 TokenId (line 1, column 11) "Main"
@@ -399,22 +517,41 @@ begin
 end Main;
 ```
 
-### Exemplo 5: Case-Insensitive (Ada real)
+### Exemplo 5: Exemplo Completo (test_comprehensive.ada)
 
 ```ada
-PROCEDURE Main IS
-BEGIN
-  x := 10;
-  IF x > 5 THEN
-    Put_Line("Greater")
-  ELSE
-    Put_Line("Smaller");
-END Main;
+procedure Main is
+begin
+  a := 10;
+  b := 20;
+  c := a + b * 2;
+  
+  if c > 30 then
+    Put_Line("Large number")
+  else
+    Put_Line("Small number");
+  
+  counter := 0;
+  factorial := 1;
+  
+  while counter < 5 loop
+    counter := counter + 1;
+    factorial := factorial * counter
+  end loop;
+  
+  Put_Line("Factorial of 5 is:");
+  Put_Line(factorial);
+  
+  if factorial > 100 then
+    Put_Line("Factorial is greater than 100")
+end Main;
 ```
 
 ---
 
 ## Testes Incluídos
+
+O projeto inclui vários ficheiros de teste para validar diferentes funcionalidades:
 
 ### `test.ada`
 Programa de teste básico com:
@@ -424,34 +561,67 @@ Programa de teste básico com:
 - Ciclos while
 - Chamadas a Put_Line
 
-### `test_case.ada`
-Demonstra suporte a keywords case-insensitive:
-- Mistura de UPPERCASE, lowercase e MixedCase
-- Testa todas as construções da linguagem
-- Valida conformidade com Ada real
+### `test_arithmetic.ada`
+Testa operações aritméticas:
+- Adição, subtração, multiplicação, divisão
+- Operador módulo
+- Precedência de operadores
 
-Para executar:
+### `test_conditionals.ada`
+Testa estruturas condicionais:
+- if-then simples
+- if-then-else
+- Múltiplos condicionais
+- Operadores de comparação
+
+### `test_loop.ada`
+Testa ciclos while:
+- Inicialização de variáveis
+- Condição de loop
+- Incremento de contador
+- Acumulação de valores
+
+### `test_nested.ada`
+Testa estruturas aninhadas:
+- Blocos dentro de condicionais
+- Ciclos dentro de blocos
+- Condicionais dentro de ciclos
+
+### `test_comprehensive.ada`
+Teste completo que combina:
+- Expressões aritméticas complexas
+- Múltiplos condicionais
+- Ciclos com cálculos
+- Output de resultados
+
+Para executar todos os testes:
 ```bash
 ./compilador test.ada
-./compilador test_case.ada
+./compilador test_arithmetic.ada
+./compilador test_conditionals.ada
+./compilador test_loop.ada
+./compilador test_nested.ada
+./compilador test_comprehensive.ada
 ```
 
 ---
 
 ## Limitações Conhecidas
 
-1. **Não há análise semântica:**
-   - Não verifica se variáveis foram declaradas
-   - Não verifica tipos (pode somar string com inteiro na AST)
+1. **Análise semântica limitada:**
+   - Não verifica se variáveis foram declaradas antes de serem usadas
+   - Não verifica tipos (pode tentar somar string com inteiro na AST)
    - Não detecta variáveis não inicializadas
 
-2. **Não há declaração de variáveis:**
+2. **Sem declaração de variáveis:**
    - O compilador assume que todas as variáveis usadas existem
    - Não há tipos explícitos (Integer, String, Boolean)
+   - Todas as variáveis são tratadas como inteiros no MIPS
 
-3. **Não há geração de código:**
-   - O compilador apenas produz a AST
-   - Não gera código executável ou código intermédio
+3. **Alocação de registos simples:**
+   - Número limitado de registos disponíveis
+   - Não implementa spilling para memória
+   - Pode falhar com muitas variáveis simultâneas
 
 4. **Estruturas não suportadas:**
    - Arrays
@@ -461,8 +631,13 @@ Para executar:
    - Tipos definidos pelo utilizador
 
 5. **Input limitado:**
-   - `Get_Line` é reconhecido mas não tem implementação real
-   - Apenas reconhecido como parte da sintaxe
+   - `Get_Line` é reconhecido e gera código MIPS para leitura
+   - Usa syscall 5 do MIPS para ler inteiros
+
+6. **Optimizações:**
+   - Optimizações limitadas no código gerado
+   - Não implementa propagação de constantes
+   - Não elimina código morto
 
 ---
 
@@ -478,6 +653,10 @@ Isto remove:
 - `Lexer.hs` (gerado pelo Alex)
 - `Parser.hs` (gerado pelo Happy)
 - Ficheiros objeto (`.o`, `.hi`)
+- Executável `compilador`
+- Ficheiros de informação do parser (`Parser.info`)
+
+**Nota:** Os ficheiros `.asm` gerados **não** são removidos pelo `make clean`.
 - Executável `compilador`
 - Ficheiros de informação do parser (`Parser.info`)
 
@@ -573,18 +752,31 @@ data Token =
 - **Alex User Guide:** https://www.haskell.org/alex/
 - **Happy User Guide:** https://www.haskell.org/happy/
 - **GHC Documentation:** https://www.haskell.org/ghc/
+- **MARS MIPS Simulator:** http://courses.missouristate.edu/kenvollmar/mars/
+- **MIPS Assembly Reference:** https://www.cs.cornell.edu/courses/cs3410/2019sp/schedule/mips-ref.pdf
 
 ---
 
 ## Notas Finais
 
-Este compilador foi desenvolvido como parte do Trabalho Prático 1 da unidade curricular de Compiladores (DCC-FCUP). Implementa apenas um subconjunto simplificado da linguagem Ada, focado nas fases de análise léxica e sintática.
+Este compilador foi desenvolvido como parte do Trabalho Prático da unidade curricular de Compiladores (DCC-FCUP). Implementa um subconjunto simplificado da linguagem Ada com as seguintes fases:
 
-Para futuras extensões, seria necessário implementar:
-- Análise semântica (verificação de tipos, tabela de símbolos)
-- Geração de código intermédio
-- Otimizações
-- Geração de código final (assembly, LLVM, etc.)
+1. **Análise Léxica** - Tokenização usando Alex
+2. **Análise Sintática** - Parsing usando Happy e construção da AST
+3. **Geração de Código Intermédio** - Conversão da AST para TAC
+4. **Geração de Código Final** - Tradução de TAC para MIPS assembly
+
+O código gerado é compatível com o simulador MARS e pode ser executado para validar a corretude da compilação.
+
+### Melhorias Futuras
+
+Para futuras extensões, seria útil implementar:
+- Análise semântica completa (verificação de tipos, tabela de símbolos)
+- Optimizações de código (propagação de constantes, eliminação de código morto)
+- Alocação de registos mais sofisticada com spilling
+- Suporte para arrays e records
+- Procedures e functions definidas pelo utilizador
+- Geração de código para outras arquiteturas (x86, ARM, LLVM IR)
 
 ---
 
