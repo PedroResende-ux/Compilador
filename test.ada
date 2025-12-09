@@ -1,4 +1,9 @@
 procedure Main is
+  x : Integer;
+  y : Integer;
+  z : Integer;
+  counter : Integer;
+  flag : Boolean;
 begin
   x := 10;
   y := 20;
@@ -14,6 +19,11 @@ begin
     Put_Line("Counter value:");
     counter := counter + 1
   end loop;
+  
+  begin
+    flag := True;
+    Put_Line("Nested scope test")
+  end;
   
   Put_Line("Program finished")
 end Main;

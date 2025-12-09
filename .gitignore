@@ -1,0 +1,26 @@
+# Haskell build artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Executable
+compilador
+
+# Parser/Lexer info files
+Parser.info
+
+# Cabal/Stack
+dist/
+dist-newstyle/
+.stack-work/
+
+# Editor files
+*~
+.*.swp
+.*.swo
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db

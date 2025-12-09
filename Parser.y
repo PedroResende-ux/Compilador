@@ -29,6 +29,8 @@ import AST
   false     { TokenFalse _ }
   put_line  { TokenPutLine _ }
   get_line  { TokenGetLine _ }
+  inttype   { TokenIntegerType _ }
+  booltype  { TokenBooleanType _ }
   ':='      { TokenAssign _ }
   ';'       { TokenSemi _ }
   ':'       { TokenColon _ }
@@ -62,12 +64,28 @@ import AST
 
 %%
 
--- Programa principal: procedure Main is begin ... end Main;
-Program : procedure id is begin StmtList end id ';' 
+-- Programa principal: procedure Main is [declarations] begin ... end Main;
+Program : procedure id is DeclList begin StmtList end id ';' 
+          { if $2 /= "Main" || $2 /= $8 
+            then error "Procedure name must be 'Main' and match at begin/end"
+            else Program $4 $6 
+          }
+        | procedure id is begin StmtList end id ';' 
           { if $2 /= "Main" || $2 /= $7 
             then error "Procedure name must be 'Main' and match at begin/end"
-            else Program $5 
+            else Program [] $5 
           }
+
+-- Lista de declarações
+DeclList : Decl                    { [$1] }
+         | Decl DeclList           { $1 : $2 }
+
+-- Declaração de variável: x : Integer;
+Decl : id ':' Type ';'             { VarDecl $1 $3 }
+
+-- Tipos
+Type : inttype                     { IntegerType }
+     | booltype                    { BooleanType }
 
 -- Lista de comandos separados por ;
 StmtList : Stmt                    { [$1] }

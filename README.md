@@ -14,11 +14,12 @@ Este projeto implementa um **compilador para um subconjunto da linguagem Ada**, 
 
 1. **Análise Léxica** (Lexer) - Reconhecimento de tokens
 2. **Análise Sintática** (Parser) - Construção da árvore sintática abstrata (AST)
+3. **Análise Semântica** (Semantic) - Validação de declarações e escopos com tabela de símbolos
 
 O compilador aceita como entrada um programa Ada válido e produz como saída:
-- Lista de tokens reconhecidos
 - Árvore sintática abstrata (AST) formatada
-- Representação Haskell da AST
+- Resultados da análise semântica (erros e warnings)
+- Tabela de símbolos com todas as declarações
 
 ---
 
@@ -35,6 +36,7 @@ Implementada usando **Alex**, o lexer reconhece:
 - Valores booleanos: `True`, `False`
 - Operador aritmético: `mod`
 - Input/Output: `Put_Line`, `Get_Line`
+- **Tipos de dados:** `Integer`, `Boolean`
 
 #### Operadores:
 - **Aritméticos:** `+`, `-`, `*`, `/`, `mod`
@@ -63,12 +65,25 @@ Implementada usando **Happy**, o parser reconhece:
 #### Estrutura do Programa:
 ```ada
 procedure Main is
+  -- declarações de variáveis (opcional)
+  x : Integer;
+  y : Boolean;
 begin
   -- comandos aqui
 end Main;
 ```
 
 O programa **deve** ser uma procedure chamada `Main` (case-insensitive), e o nome no início e no fim devem coincidir.
+
+#### Declarações de Variáveis:
+```ada
+x : Integer;
+counter : Integer;
+flag : Boolean;
+```
+- Devem aparecer entre `is` e `begin`
+- Formato: `identificador : Tipo ;`
+- Tipos suportados: `Integer`, `Boolean`
 
 #### Comandos Suportados:
 
@@ -140,7 +155,13 @@ A AST é definida no módulo `AST.hs`:
 
 ```haskell
 -- Programa
-data Program = Program [Stmt]
+data Program = Program [Decl] [Stmt]
+
+-- Declarações
+data Decl = VarDecl String Type
+
+-- Tipos
+data Type = IntegerType | BooleanType
 
 -- Comandos
 data Stmt = 
@@ -165,20 +186,73 @@ data Expr =
 
 ---
 
+### 🔍 Análise Semântica (Semantic Analysis)
+
+Implementada no módulo `Semantic.hs`, realiza:
+
+#### Tabela de Símbolos:
+- Armazena todas as declarações de variáveis
+- Mantém informação de tipo (`Integer` ou `Boolean`)
+- Gerencia escopos aninhados (blocos `begin...end`)
+- Cada escopo tem seu próprio namespace
+
+#### Validações Realizadas:
+
+1. **Detecção de Redeclarações:**
+   ```ada
+   x : Integer;
+   x : Integer;  -- ERRO!
+   ```
+   Erro: "Variable 'x' already declared in this scope"
+
+2. **Detecção de Variáveis Não Declaradas:**
+   ```ada
+   procedure Main is
+     x : Integer;
+   begin
+     y := 10  -- ERRO: y não foi declarada
+   end Main;
+   ```
+   Erro: "Variable 'y' used but not declared"
+
+3. **Gestão de Escopos:**
+   ```ada
+   procedure Main is
+     x : Integer;
+   begin
+     x := 10;       -- OK
+     begin
+       x := 20;     -- OK: acessa x do escopo exterior
+     end
+   end Main;
+   ```
+
+#### Saída da Análise Semântica:
+- Lista de erros semânticos (se houver)
+- Lista de warnings (se houver)
+- Tabela de símbolos final
+- Programa termina com erro se houver erros semânticos
+
+---
+
 ## Estrutura do Projeto
 
 ```
 .
-├── AST.hs              # Definição da AST
-├── Lexer.x             # Especificação do lexer (Alex)
-├── Parser.y            # Especificação do parser (Happy)
-├── Main.hs             # Programa principal
-├── Makefile            # Automatização da compilação
-├── build.sh            # Script alternativo de compilação
-├── compilador.cabal    # Configuração Cabal (opcional)
-├── test.ada            # Programa de teste simples
-├── test_case.ada       # Teste com case-insensitive
-└── README.md           # Este ficheiro
+├── AST.hs                      # Definição da AST e Tabela de Símbolos
+├── Semantic.hs                 # Análise semântica
+├── Lexer.x                     # Especificação do lexer (Alex)
+├── Parser.y                    # Especificação do parser (Happy)
+├── Main.hs                     # Programa principal
+├── Makefile                    # Automatização da compilação
+├── test.ada                    # Programa de teste principal
+├── test_declarations.ada       # Teste de declarações
+├── test_undeclared.ada         # Teste de erro: variável não declarada
+├── test_redeclaration.ada      # Teste de erro: redeclaração
+├── test_nested_scope.ada       # Teste de escopos aninhados
+├── test_comprehensive.ada      # Teste abrangente
+├── SYMBOL_TABLE_IMPLEMENTATION.md  # Documentação da tabela de símbolos
+└── README.md                   # Este ficheiro
 ```
 
 ---
@@ -310,43 +384,59 @@ make test
 
 O compilador produz **três secções** de output:
 
-### 1. **TOKENS**
-Lista de todos os tokens reconhecidos pelo lexer com informações de posição:
-
-```
-=== TOKENS ===
-TokenProcedure (line 1, column 1)
-TokenId (line 1, column 11) "Main"
-TokenIs (line 1, column 16)
-...
-```
-
-### 2. **ABSTRACT SYNTAX TREE**
-Representação formatada e legível da AST:
+### 1. **ABSTRACT SYNTAX TREE**
+Representação formatada e legível da AST, incluindo declarações:
 
 ```
 === ABSTRACT SYNTAX TREE ===
-Program:
-  x := 10
-  Put_Line("Hello")
+Program
+  Declarations:
+    ├─ VarDecl: x : IntegerType
+    ├─ VarDecl: y : IntegerType
+  Statements:
+    ├─ Assignment
+      ├─ Variable: x
+      └─ IntLit: 10
+    ├─ PutLine
+      └─ StringLit: "Hello"
 ```
 
-### 3. **HASKELL AST REPRESENTATION**
-Representação completa da estrutura de dados em Haskell:
+### 2. **SEMANTIC ANALYSIS**
+Resultados da análise semântica:
 
 ```
-=== HASKELL AST REPRESENTATION ===
-Program [Assignment "x" (IntLit 10), PutLine (StringLit "Hello")]
+=== SEMANTIC ANALYSIS ===
+✓ No semantic errors found
+```
+
+Ou em caso de erros:
+```
+=== SEMANTIC ANALYSIS ===
+✗ Semantic errors found:
+  Error: Variable 'z' used but not declared
+```
+
+### 3. **SYMBOL TABLE**
+Tabela de símbolos com todas as declarações:
+
+```
+=== SYMBOL TABLE ===
+SymbolTable {scopes = [fromList [
+  ("x",SymbolInfo {symbolName = "x", symbolType = IntegerType, scopeLevel = 0}),
+  ("y",SymbolInfo {symbolName = "y", symbolType = IntegerType, scopeLevel = 0})
+]], currentLevel = 0}
 ```
 
 ---
 
 ## Exemplos de Programas
 
-### Exemplo 1: Programa Simples
+### Exemplo 1: Programa com Declarações
 
 ```ada
 procedure Main is
+  x : Integer;
+  msg : String;
 begin
   x := 10;
   Put_Line("The value is:");
@@ -358,6 +448,7 @@ end Main;
 
 ```ada
 procedure Main is
+  x : Integer;
 begin
   x := 5;
   if x > 0 then
@@ -371,6 +462,7 @@ end Main;
 
 ```ada
 procedure Main is
+  counter : Integer;
 begin
   counter := 0;
   while counter < 5 loop
@@ -381,11 +473,21 @@ begin
   Put_Line("Done")
 end Main;
 ```
+    Put_Line(counter);
+    counter := counter + 1
+  end loop;
+  Put_Line("Done")
+end Main;
+```
 
-### Exemplo 4: Expressões Complexas
+### Exemplo 4: Expressões Complexas com Declarações
 
 ```ada
 procedure Main is
+  x : Integer;
+  y : Integer;
+  z : Integer;
+  remainder : Integer;
 begin
   x := 10;
   y := 20;
@@ -399,17 +501,21 @@ begin
 end Main;
 ```
 
-### Exemplo 5: Case-Insensitive (Ada real)
+### Exemplo 5: Escopos Aninhados
 
 ```ada
-PROCEDURE Main IS
-BEGIN
+procedure Main is
+  x : Integer;
+  y : Integer;
+begin
   x := 10;
-  IF x > 5 THEN
-    Put_Line("Greater")
-  ELSE
-    Put_Line("Smaller");
-END Main;
+  begin
+    y := 20;
+    Put_Line("Inner block");
+    x := x + y
+  end;
+  Put_Line("Outer block")
+end Main;
 ```
 
 ---
@@ -417,9 +523,41 @@ END Main;
 ## Testes Incluídos
 
 ### `test.ada`
-Programa de teste básico com:
+Programa de teste principal com:
+- Declarações de variáveis
 - Atribuições simples
 - Expressões aritméticas
+- Condicionais if-then-else
+- Ciclos while
+- Blocos aninhados
+- Chamadas a Put_Line
+
+### `test_declarations.ada`
+Teste básico de declarações:
+- Múltiplas declarações de tipos diferentes
+- Uso correto de variáveis declaradas
+
+### `test_undeclared.ada`
+Teste de erro de variável não declarada:
+- Demonstra deteção de uso de variável não declarada
+- Deve produzir erro semântico
+
+### `test_redeclaration.ada`
+Teste de erro de redeclaração:
+- Demonstra deteção de declaração duplicada
+- Deve produzir erro semântico
+
+### `test_nested_scope.ada`
+Teste de escopos aninhados:
+- Blocos begin...end dentro de outros blocos
+- Acesso a variáveis de escopos exteriores
+
+### `test_comprehensive.ada`
+Teste abrangente com todos os recursos:
+- Declarações múltiplas
+- Todos os tipos de comandos
+- Escopos múltiplos aninhados
+- Expressões complexas
 - Condicionais if-then-else
 - Ciclos while
 - Chamadas a Put_Line
@@ -433,24 +571,26 @@ Demonstra suporte a keywords case-insensitive:
 Para executar:
 ```bash
 ./compilador test.ada
-./compilador test_case.ada
+./compilador test_declarations.ada
+./compilador test_undeclared.ada    # Deve mostrar erro
+./compilador test_redeclaration.ada # Deve mostrar erro
 ```
 
 ---
 
 ## Limitações Conhecidas
 
-1. **Não há análise semântica:**
-   - Não verifica se variáveis foram declaradas
-   - Não verifica tipos (pode somar string com inteiro na AST)
+1. **Análise de tipos básica:**
+   - Não verifica compatibilidade de tipos em expressões
+   - Pode tentar somar Integer com Boolean na gramática
    - Não detecta variáveis não inicializadas
 
-2. **Não há declaração de variáveis:**
-   - O compilador assume que todas as variáveis usadas existem
-   - Não há tipos explícitos (Integer, String, Boolean)
+2. **Escopo de variáveis:**
+   - Variáveis de escopos exteriores são visíveis em escopos interiores
+   - Não suporta shadowing (redefinição em escopo interno)
 
 3. **Não há geração de código:**
-   - O compilador apenas produz a AST
+   - O compilador apenas produz a AST e valida semântica
    - Não gera código executável ou código intermédio
 
 4. **Estruturas não suportadas:**
@@ -459,6 +599,7 @@ Para executar:
    - Procedures/functions definidas pelo utilizador
    - Parâmetros
    - Tipos definidos pelo utilizador
+   - Constantes
 
 5. **Input limitado:**
    - `Get_Line` é reconhecido mas não tem implementação real

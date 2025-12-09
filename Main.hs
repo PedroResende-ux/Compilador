@@ -5,10 +5,20 @@ import System.IO
 import Lexer
 import Parser
 import AST
+import Semantic
+import System.Exit (exitFailure)
 
 printTree :: Program -> String
-printTree (Program stmts) = 
-  "Program\n" ++ concatMap (printStmt 1) stmts
+printTree (Program decls stmts) = 
+  "Program\n" ++ 
+  (if null decls then "" else "  Declarations:\n" ++ concatMap (printDecl 2) decls) ++
+  "  Statements:\n" ++ concatMap (printStmt 2) stmts
+
+printDecl :: Int -> Decl -> String
+printDecl level (VarDecl name typ) =
+  let indent = replicate (level * 2) ' '
+      branch = "├─ "
+  in indent ++ branch ++ "VarDecl: " ++ name ++ " : " ++ show typ ++ "\n"
 
 printStmt :: Int -> Stmt -> String
 printStmt level stmt = 
@@ -144,7 +154,32 @@ main = do
   -- Análise sintática
   let ast = parse tokens
   
+  -- Análise semântica
+  let semanticResult = analyzeProgram ast
+  
+  -- Print AST
+  putStrLn "=== ABSTRACT SYNTAX TREE ==="
   putStrLn $ printTree ast
+  putStrLn ""
+  
+  -- Print semantic analysis results
+  putStrLn "=== SEMANTIC ANALYSIS ==="
+  if null (errors semanticResult)
+    then putStrLn "✓ No semantic errors found"
+    else do
+      putStrLn "✗ Semantic errors found:"
+      mapM_ (putStrLn . ("  " ++)) (errors semanticResult)
+      exitFailure
+  
+  if null (warnings semanticResult)
+    then return ()
+    else do
+      putStrLn "Warnings:"
+      mapM_ (putStrLn . ("  " ++)) (warnings semanticResult)
+  
+  putStrLn ""
+  putStrLn "=== SYMBOL TABLE ==="
+  print (symbolTable semanticResult)
 
 
 generateTACExpr :: Expr -> Int -> ([TAC], String, Int)
