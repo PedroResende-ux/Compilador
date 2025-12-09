@@ -3,6 +3,7 @@ module Main where
 import System.Environment (getArgs)
 import System.IO
 import System.Exit (exitFailure)
+import Data.List (isSuffixOf)
 import Lexer
 import Parser
 import AST
@@ -152,7 +153,12 @@ main = do
   
   -- Determine output filename
   let outputFile = case args of
-        (filename:_) -> takeWhile (/= '.') filename ++ ".asm"
+        (filename:_) -> 
+          -- Remove the extension and add .asm
+          let withoutExt = if ".ada" `isSuffixOf` filename
+                          then take (length filename - 4) filename
+                          else filename
+          in withoutExt ++ ".asm"
         [] -> "output.asm"
   
   -- Análise léxica

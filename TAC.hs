@@ -25,6 +25,9 @@ newLabel :: TACState -> (String, TACState)
 newLabel state = ("L" ++ show (labelCount state), state { labelCount = labelCount state + 1 })
 
 -- Generate TAC from Program
+-- Note: Declarations are handled during semantic analysis and stored in the symbol table.
+-- TAC generation focuses only on executable statements, as variable declarations don't
+-- generate runtime code - they're used for semantic checking and type information.
 generateTAC :: Program -> [TAC]
 generateTAC (Program _ stmts) = 
     let (tac, _) = generateStmtList stmts initTACState
