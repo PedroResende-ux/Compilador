@@ -41,6 +41,10 @@ $(EXEC): $(LEXER_HS) $(PARSER_HS) $(AST_SRC) $(TAC_SRC) $(MIPS_SRC) $(MAIN_SRC)
 test: $(EXEC)
 	./$(EXEC) test.ada
 
+# Executar todos os testes
+test-all: $(EXEC)
+	./run_tests.sh
+
 # Limpar ficheiros gerados
 clean:
 	rm -f $(LEXER_HS) $(PARSER_HS)
@@ -48,4 +52,8 @@ clean:
 	rm -f $(EXEC)
 	rm -f Parser.info
 
-.PHONY: all test clean
+# Limpar tudo incluindo ficheiros .asm
+clean-all: clean
+	rm -f *.asm
+
+.PHONY: all test test-all clean clean-all
