@@ -2,13 +2,25 @@ module Main where
 
 import System.Environment (getArgs)
 import System.IO
+import System.Exit (exitFailure)
 import Lexer
 import Parser
 import AST
+import Semantic
+import TAC
+import MIPS
 
 printTree :: Program -> String
-printTree (Program stmts) = 
-  "Program\n" ++ concatMap (printStmt 1) stmts
+printTree (Program decls stmts) = 
+  "Program\n" ++ 
+  (if null decls then "" else "  Declarations:\n" ++ concatMap (printDecl 2) decls) ++
+  "  Statements:\n" ++ concatMap (printStmt 2) stmts
+
+printDecl :: Int -> Decl -> String
+printDecl level (VarDecl name typ) =
+  let indent = replicate (level * 2) ' '
+      branch = "├─ "
+  in indent ++ branch ++ "VarDecl: " ++ name ++ " : " ++ show typ ++ "\n"
 
 printStmt :: Int -> Stmt -> String
 printStmt level stmt = 
@@ -138,24 +150,59 @@ main = do
     [] -> getContents  
     (filename:_) -> readFile filename 
   
+  -- Determine output filename
+  let outputFile = case args of
+        (filename:_) -> takeWhile (/= '.') filename ++ ".asm"
+        [] -> "output.asm"
+  
   -- Análise léxica
   let tokens = alexScanTokens input
   
   -- Análise sintática
   let ast = parse tokens
   
+  -- Análise semântica
+  let semanticResult = analyzeProgram ast
+  
+  -- Print AST
+  putStrLn "=== ABSTRACT SYNTAX TREE ==="
   putStrLn $ printTree ast
-
-
-generateTACExpr :: Expr -> Int -> ([TAC], String, Int)
-generateTACExpr (IntLit n) tempCount =
-    ([], show n, tempCount)  -- Literals directly return themselves
-
-generateTACExpr (Add e1 e2) tempCount =
-    let
-        (tac1, res1, tempCount1) = generateTACExpr e1 tempCount
-        (tac2, res2, tempCount2) = generateTACExpr e2 tempCount1
-        tempVar = "t" ++ show tempCount2
-        currTAC = BinOp tempVar res1 res2 "Add"
-    in
-        (tac1 ++ tac2 ++ [currTAC], tempVar, tempCount2 + 1)
+  putStrLn ""
+  
+  -- Print semantic analysis results
+  putStrLn "=== SEMANTIC ANALYSIS ==="
+  if null (errors semanticResult)
+    then putStrLn "✓ No semantic errors found"
+    else do
+      putStrLn "✗ Semantic errors found:"
+      mapM_ (putStrLn . ("  " ++)) (errors semanticResult)
+      exitFailure
+  
+  if null (warnings semanticResult)
+    then return ()
+    else do
+      putStrLn "Warnings:"
+      mapM_ (putStrLn . ("  " ++)) (warnings semanticResult)
+  
+  putStrLn ""
+  putStrLn "=== SYMBOL TABLE ==="
+  print (symbolTable semanticResult)
+  putStrLn ""
+  
+  -- Gerar Three-Address Code (TAC)
+  let tac = generateTAC ast
+  
+  putStrLn "=== THREE-ADDRESS CODE ==="
+  putStrLn $ prettyPrintTAC tac
+  putStrLn ""
+  
+  -- Gerar código MIPS
+  let mipsCode = generateMIPS tac
+  
+  putStrLn "=== MIPS ASSEMBLY CODE ==="
+  putStrLn mipsCode
+  putStrLn ""
+  
+  -- Write MIPS code to file
+  writeFile outputFile mipsCode
+  putStrLn $ "MIPS code written to: " ++ outputFile
