@@ -1,0 +1,17 @@
+# Auto-generated parser and lexer files
+Lexer.hs
+Parser.hs
+
+# Haskell build artifacts
+*.hi
+*.o
+
+# Dist directories
+.dist
+.dist-newstyle
+
+# Stack build artifacts
+.stack-work
+
+# Cabal build artifacts
+cabal.project.local
