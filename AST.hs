@@ -3,8 +3,35 @@
 
 module AST where
 
--- Programa principal
-data Program = Program [Stmt]
+import qualified Data.Map as Map
+import Data.Maybe (isJust)
+
+-- Tipos de variáveis
+data Type = IntegerType | BooleanType
+  deriving (Show, Eq)
+
+-- Informação de símbolos
+data SymbolInfo = SymbolInfo 
+  { symbolName :: String
+  , symbolType :: Type
+  , scopeLevel :: Int
+  }
+  deriving (Show, Eq)
+
+-- Tabela de símbolos (usa Map para eficiência)
+type Scope = Map.Map String SymbolInfo
+data SymbolTable = SymbolTable
+  { scopes :: [Scope]          -- Lista de escopos (topo = escopo atual)
+  , currentLevel :: Int         -- Nível de escopo atual
+  }
+  deriving (Show, Eq)
+
+-- Programa principal com tabela de símbolos
+data Program = Program [Decl] [Stmt]
+  deriving (Show, Eq)
+
+-- Declarações
+data Decl = VarDecl String Type
   deriving (Show, Eq)
 
 -- Comandos (Statements)
@@ -61,3 +88,47 @@ data TAC =
   | Ifz String String                      -- ifz x goto label (Conditional Jump)
   | Label String                           -- label: (Control Flow Marker)
   deriving (Show, Eq)
+
+-- Symbol Table Operations
+
+-- Create an empty symbol table
+emptySymbolTable :: SymbolTable
+emptySymbolTable = SymbolTable [Map.empty] 0
+
+-- Enter a new scope (e.g., begin block)
+enterScope :: SymbolTable -> SymbolTable
+enterScope (SymbolTable scopes level) = 
+  SymbolTable (Map.empty : scopes) (level + 1)
+
+-- Exit current scope (e.g., end block)
+exitScope :: SymbolTable -> SymbolTable
+exitScope (SymbolTable (_:rest) level) = 
+  SymbolTable rest (level - 1)
+exitScope st = st  -- Don't exit global scope
+
+-- Insert a symbol into the current scope
+-- Returns Nothing if symbol already exists in current scope, Just table otherwise
+insertSymbol :: String -> Type -> SymbolTable -> Maybe SymbolTable
+insertSymbol name typ (SymbolTable (currentScope:rest) level) =
+  if Map.member name currentScope
+  then Nothing  -- Symbol already declared in current scope
+  else let info = SymbolInfo name typ level
+           newScope = Map.insert name info currentScope
+       in Just (SymbolTable (newScope:rest) level)
+insertSymbol _ _ st = Just st  -- Empty scope list (shouldn't happen)
+
+-- Lookup a symbol in all scopes (search from current to global)
+lookupSymbol :: String -> SymbolTable -> Maybe SymbolInfo
+lookupSymbol name (SymbolTable scopes _) = 
+  lookupInScopes name scopes
+  where
+    lookupInScopes :: String -> [Scope] -> Maybe SymbolInfo
+    lookupInScopes _ [] = Nothing
+    lookupInScopes n (s:ss) = 
+      case Map.lookup n s of
+        Just info -> Just info
+        Nothing -> lookupInScopes n ss
+
+-- Check if symbol is declared
+isDeclared :: String -> SymbolTable -> Bool
+isDeclared name st = isJust (lookupSymbol name st)
