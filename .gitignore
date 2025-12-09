@@ -1,0 +1,16 @@
+# Haskell build artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Generated files
+Lexer.hs
+Parser.hs
+Parser.info
+
+# Executable
+compilador
+
+# Test output
+*.asm

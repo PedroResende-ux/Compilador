@@ -13,6 +13,8 @@ LEXER_SRC = Lexer.x
 PARSER_SRC = Parser.y
 MAIN_SRC = Main.hs
 AST_SRC = AST.hs
+TAC_SRC = TAC.hs
+MIPS_SRC = MIPS.hs
 
 # Ficheiros gerados
 LEXER_HS = Lexer.hs
@@ -32,7 +34,7 @@ $(PARSER_HS): $(PARSER_SRC)
 	$(HAPPY) $(PARSER_SRC)
 
 # Compilar o programa principal
-$(EXEC): $(LEXER_HS) $(PARSER_HS) $(AST_SRC) $(MAIN_SRC)
+$(EXEC): $(LEXER_HS) $(PARSER_HS) $(AST_SRC) $(TAC_SRC) $(MIPS_SRC) $(MAIN_SRC)
 	$(GHC) $(GHCFLAGS) --make $(MAIN_SRC) -o $(EXEC)
 
 # Testar com um exemplo

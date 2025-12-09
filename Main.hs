@@ -5,6 +5,8 @@ import System.IO
 import Lexer
 import Parser
 import AST
+import TAC
+import MIPS
 
 printTree :: Program -> String
 printTree (Program stmts) = 
@@ -138,24 +140,36 @@ main = do
     [] -> getContents  
     (filename:_) -> readFile filename 
   
+  -- Determine output filename
+  let outputFile = case args of
+        (filename:_) -> takeWhile (/= '.') filename ++ ".asm"
+        [] -> "output.asm"
+  
   -- Análise léxica
   let tokens = alexScanTokens input
   
   -- Análise sintática
   let ast = parse tokens
   
+  -- Gerar Three-Address Code (TAC)
+  let tac = generateTAC ast
+  
+  -- Gerar código MIPS
+  let mipsCode = generateMIPS tac
+  
+  -- Output
+  putStrLn "=== ABSTRACT SYNTAX TREE ==="
   putStrLn $ printTree ast
-
-
-generateTACExpr :: Expr -> Int -> ([TAC], String, Int)
-generateTACExpr (IntLit n) tempCount =
-    ([], show n, tempCount)  -- Literals directly return themselves
-
-generateTACExpr (Add e1 e2) tempCount =
-    let
-        (tac1, res1, tempCount1) = generateTACExpr e1 tempCount
-        (tac2, res2, tempCount2) = generateTACExpr e2 tempCount1
-        tempVar = "t" ++ show tempCount2
-        currTAC = BinOp tempVar res1 res2 "Add"
-    in
-        (tac1 ++ tac2 ++ [currTAC], tempVar, tempCount2 + 1)
+  putStrLn ""
+  
+  putStrLn "=== THREE-ADDRESS CODE ==="
+  putStrLn $ prettyPrintTAC tac
+  putStrLn ""
+  
+  putStrLn "=== MIPS ASSEMBLY CODE ==="
+  putStrLn mipsCode
+  putStrLn ""
+  
+  -- Write MIPS code to file
+  writeFile outputFile mipsCode
+  putStrLn $ "MIPS code written to: " ++ outputFile
