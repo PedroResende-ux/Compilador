@@ -322,8 +322,6 @@ export PATH="$HOME/.cabal/bin:$PATH"
 
 - **MARS Simulator:** https://github.com/dpetersanderson/MARS
 - **MIPS Reference:** https://courses.missouristate.edu/KenVollmar/mars/
-- **Three-Address Code:** Aulas Teóricas 10-11 (FCUP)
-- **Tabela de Símbolos:** Aula Teórica 8 (FCUP)
 - **Alex User Guide:** https://www.haskell.org/alex/
 - **Happy User Guide:** https://www.haskell.org/happy/
 
@@ -331,7 +329,7 @@ export PATH="$HOME/.cabal/bin:$PATH"
 
 ## Notas Finais
 
-Este compilador foi desenvolvido como parte do Trabalho Prático 2 da unidade curricular de Compiladores (DCC-FCUP). Implementa um compilador completo desde a análise léxica até a geração de código assembly MIPS executável.
+Este compilador foi desenvolvido para o Trabalho Prático 2. Implementa um compilador completo desde a análise léxica até à geração de código assembly MIPS executável.
 
 O código gerado foi testado extensivamente no simulador MARS e executa corretamente todos os casos de teste fornecidos.
 
