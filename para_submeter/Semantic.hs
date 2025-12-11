@@ -18,9 +18,9 @@ import qualified Data.Map as Map
 
 -- Resultado da análise semântica
 data SemanticResult = SemanticResult
-  { errors :: [String]       -- Erros encontrados
-  , warnings :: [String]     -- Avisos (preparado para futuro)
-  , symbolTable :: SymbolTable  -- Tabela de símbolos final
+  { errors :: [String]
+  , warnings :: [String]
+  , symbolTable :: SymbolTable
   }
   deriving (Show)
 
