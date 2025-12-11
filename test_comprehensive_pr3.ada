@@ -1,4 +1,9 @@
 procedure Main is
+  a : Integer;
+  b : Integer;
+  c : Integer;
+  counter : Integer;
+  factorial : Integer;
 begin
   a := 10;
   b := 20;

@@ -46,9 +46,14 @@ allocateVars tacs state = foldl allocateVar state (collectVars tacs)
     allocateVar st var = 
         if Map.member var (varMap st)
         then st
-        else let reg = "$s" ++ show (nextVarReg st)
-                 newMap = Map.insert var reg (varMap st)
-             in st { varMap = newMap, nextVarReg = nextVarReg st + 1 }
+        else if nextVarReg st < 8
+             then let reg = "$s" ++ show (nextVarReg st)
+                      newMap = Map.insert var reg (varMap st)
+                  in st { varMap = newMap, nextVarReg = nextVarReg st + 1 }
+             else let offset = nextStackOffset st + 4
+                      memLoc = show offset ++ "($sp)"
+                      newMap = Map.insert var memLoc (varMap st)
+                  in st { varMap = newMap, nextStackOffset = offset }
     
     nub :: Eq a => [a] -> [a]
     nub [] = []
@@ -64,8 +69,8 @@ extractStrings :: [TAC] -> MIPSState -> (String, MIPSState)
 extractStrings tacs state = 
     let strings = collectStrings tacs [] 0
         dataSection = if null strings 
-                      then "" 
-                      else ".data\n" ++ concatMap formatString strings
+                      then ".data\nnewline: .asciiz \"\\n\"\n" 
+                      else ".data\n" ++ concatMap formatString strings ++ "newline: .asciiz \"\\n\"\n"
     in (dataSection, state { stringLiterals = strings })
   where
     collectStrings [] acc _ = reverse acc
@@ -269,8 +274,5 @@ mipsPostamble = unlines [
     "",
     "  # Exit program",
     "  li $v0, 10",
-    "  syscall",
-    "",
-    ".data",
-    "newline: .asciiz \"\\n\""
+    "  syscall"
   ]

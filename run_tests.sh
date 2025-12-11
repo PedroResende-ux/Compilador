@@ -2,8 +2,6 @@
 # Test script for the integrated compiler
 # Tests both symbol table and code generation functionality
 
-set -e
-
 echo "=========================================="
 echo "Integrated Compiler Test Suite"
 echo "=========================================="

@@ -66,12 +66,12 @@ import AST
 
 -- Programa principal: procedure Main is [declarations] begin ... end Main;
 Program : procedure id is DeclList begin StmtList end id ';' 
-          { if $2 /= "Main" || $2 /= $8 
+          { if $2 /= "Main" && $2 /= $8 
             then error "Procedure name must be 'Main' and match at begin/end"
             else Program $4 $6 
           }
         | procedure id is begin StmtList end id ';' 
-          { if $2 /= "Main" || $2 /= $7 
+          { if $2 /= "Main" && $2 /= $7 
             then error "Procedure name must be 'Main' and match at begin/end"
             else Program [] $5 
           }
