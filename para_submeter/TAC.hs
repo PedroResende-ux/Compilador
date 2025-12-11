@@ -112,7 +112,7 @@ transStm (PutLine expr) state =
     in (exprInstrs ++ [UnOp "_print" result "Print"], state1)
 
 -- Traduzir expressão para instruções
--- (Aula 10: "transExpr : (Exp, Table, Temp) → [Instr]")
+-- Esquema de transformação de expressões para TAC
 -- Retorna (instruções, nome/valor do resultado, novo estado)
 transExpr :: Expr -> TACState -> ([Instr], String, TACState)
 
@@ -127,7 +127,7 @@ transExpr GetLine state =
     in ([UnOp temp "_input" "GetLine"], temp, state1)
 
 -- Operações binárias
--- (Aula 10: caso "e1 binop e2" em transExpr)
+-- Caso binário: e1 op e2
 transExpr (Add e1 e2) state = transBinOp e1 e2 "Add" state
 transExpr (Sub e1 e2) state = transBinOp e1 e2 "Sub" state
 transExpr (Mul e1 e2) state = transBinOp e1 e2 "Mul" state
@@ -147,7 +147,7 @@ transExpr (Neg e) state = transUnOp e "Neg" state
 transExpr (Not e) state = transUnOp e "Not" state
 
 -- Função auxiliar para operações binárias
--- (Derivada do algoritmo transExpr da Aula 10)
+-- Derivado do algoritmo de transformação de expressões
 transBinOp :: Expr -> Expr -> String -> TACState -> ([Instr], String, TACState)
 transBinOp e1 e2 op state =
     let (instrs1, res1, state1) = transExpr e1 state

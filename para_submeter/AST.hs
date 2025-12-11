@@ -99,8 +99,8 @@ data Expr =
 
 data Instr =
     Assign String String                   -- x := y (atribuição direta)
-  | BinOp String String String String      -- x := y op z (ex: "Add", "Sub", "Mul")
-  | UnOp String String String              -- x := op y (ex: "Neg", "Not")
+  | BinOp String String String String      -- x := y op z
+  | UnOp String String String              -- x := op y
   | Goto String                            -- Salto incondicional: goto label
   | Ifz String String                      -- Salto condicional: ifz var label
   | Label String                           -- Marcador de rótulo para saltos
@@ -109,18 +109,16 @@ data Instr =
 -- Operações sobre a Tabela de Símbolos
 
 -- Criar uma tabela de símbolos vazia
--- (Aula 8: "inicializar uma tabela vazia")
+-- Inicializa uma tabela de símbolos vazia
 emptySymbolTable :: SymbolTable
 emptySymbolTable = SymbolTable [Map.empty] 0
 
--- Entrar num novo âmbito/scope (ex: bloco begin)
--- (Aula 8: "abrir - iniciar num novo âmbito")
+-- Entra num novo âmbito/scope
 enterScope :: SymbolTable -> SymbolTable
 enterScope (SymbolTable scopes level) = 
   SymbolTable (Map.empty : scopes) (level + 1)
 
--- Sair do âmbito atual (ex: bloco end)
--- (Aula 8: "fechar - terminar o âmbito atual")
+-- Sai do âmbito atual
 exitScope :: SymbolTable -> SymbolTable
 exitScope (SymbolTable [] _) = error "Cannot exit global scope - symbol table corrupted"
 exitScope (SymbolTable [_] 0) = error "Cannot exit global scope"
@@ -128,7 +126,7 @@ exitScope (SymbolTable (_:rest) level) =
   SymbolTable rest (level - 1)
 
 -- Inserir um símbolo no âmbito atual
--- (Aula 8: "inserir dado o identificador e informação")
+-- Insere identificador com a respetiva informação
 -- Retorna Nothing se símbolo já existe no âmbito atual, Just table caso contrário
 insertSymbol :: String -> Type -> SymbolTable -> Maybe SymbolTable
 insertSymbol _ _ (SymbolTable [] _) = error "Cannot insert into empty symbol table"
@@ -140,7 +138,7 @@ insertSymbol name typ (SymbolTable (currentScope:rest) level) =
        in Just (SymbolTable (newScope:rest) level)
 
 -- Procurar um símbolo em todos os âmbitos (do atual ao global)
--- (Aula 8: "procurar dado o identificador" - menciona "lookup")
+-- Procura informação associada a um identificador
 lookupSymbol :: String -> SymbolTable -> Maybe SymbolInfo
 lookupSymbol name (SymbolTable scopes _) = 
   lookupInScopes name scopes

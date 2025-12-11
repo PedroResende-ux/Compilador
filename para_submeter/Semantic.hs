@@ -39,7 +39,7 @@ analyzeProgram (Program decls stmts) =
      }
 
 -- Processar todas as declarações e verificar redeclarações
--- (Aula 8: processo de inserção com verificação)
+-- Processo de inserção com verificação semântica
 processDeclarations :: [Decl] -> SymbolTable -> ([String], SymbolTable)
 processDeclarations [] st = ([], st)
 processDeclarations (VarDecl name typ : rest) st =
