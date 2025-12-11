@@ -35,6 +35,8 @@ tokens :-
   False                                { \p s -> TokenFalse p }
   Put_Line                             { \p s -> TokenPutLine p }
   Get_Line                             { \p s -> TokenGetLine p }
+  Integer                              { \p s -> TokenIntegerType p }
+  Boolean                              { \p s -> TokenBooleanType p }
   
   -- Operadores e pontuação
   ":="                                 { \p s -> TokenAssign p }
@@ -81,6 +83,8 @@ data Token =
   | TokenFalse AlexPosn
   | TokenPutLine AlexPosn
   | TokenGetLine AlexPosn
+  | TokenIntegerType AlexPosn
+  | TokenBooleanType AlexPosn
   | TokenAssign AlexPosn
   | TokenSemi AlexPosn
   | TokenColon AlexPosn
@@ -122,6 +126,8 @@ getTokenPos tok = case tok of
   TokenFalse p -> showPosn p
   TokenPutLine p -> showPosn p
   TokenGetLine p -> showPosn p
+  TokenIntegerType p -> showPosn p
+  TokenBooleanType p -> showPosn p
   TokenAssign p -> showPosn p
   TokenSemi p -> showPosn p
   TokenColon p -> showPosn p

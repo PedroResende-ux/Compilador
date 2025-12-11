@@ -1,10 +1,19 @@
 # Auto-generated parser and lexer files
 Lexer.hs
 Parser.hs
+Parser.info
 
 # Haskell build artifacts
 *.hi
 *.o
+*.dyn_hi
+*.dyn_o
+
+# Compiled executable
+compilador
+
+# Generated assembly files
+*.asm
 
 # Dist directories
 .dist
