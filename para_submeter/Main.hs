@@ -196,14 +196,14 @@ main = do
   putStrLn ""
   
   -- Gerar Three-Address Code (TAC)
-  let tac = generateTAC ast
+  let tac = generateCode ast
   
   putStrLn "=== THREE-ADDRESS CODE ==="
   putStrLn $ prettyPrintTAC tac
   putStrLn ""
   
   -- Gerar código MIPS
-  let mipsCode = generateMIPS tac
+  let mipsCode = printMIPS tac
   
   putStrLn "=== MIPS ASSEMBLY CODE ==="
   putStrLn mipsCode

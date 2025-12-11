@@ -1,37 +1,59 @@
 -- MIPS.hs
--- MIPS assembly code generation from TAC
+-- Geração de código assembly MIPS a partir de TAC
+--
+-- Gera código assembly MIPS a partir de instruções de três endereços.
+--
+-- Alocação de registos:
+--   - Variáveis do programa: $s0-$s7 (saved registers)
+--   - Temporários TAC: $t0-$t9 (temporary registers)
+--   - Argumentos: $a0-$a3
+--   - Valores de retorno: $v0-$v1
+--
+-- Funções principais:
+--   - generateMIPS: Converte lista TAC para string assembly MIPS
+--   - generateMIPSInstr: Traduz instrução TAC individual para MIPS
+--   - allocateVars: Mapeia variáveis para registos
+--   - extractStrings: Recolhe literais string para secção .data
+--
+-- Estrutura do assembly:
+--   .data          - Literais string com .asciiz
+--   .text          - Código do programa
+--   main:          - Ponto de entrada
+--   syscalls       - Operações I/O (print, read, exit)
 
 module MIPS where
 
-import AST (TAC(..))
+import AST (Instr(..))
 import Data.List (intercalate)
 import qualified Data.Map as Map
 
--- Variable to register/memory mapping
+-- Estado para geração de código MIPS
+-- Mapeia variáveis para registos e rastreia alocações
 data MIPSState = MIPSState {
-    varMap :: Map.Map String String,  -- Maps variables to registers or memory locations
-    nextStackOffset :: Int,            -- Next available stack offset
-    stringLiterals :: [(String, String)], -- String literals and their labels
-    nextVarReg :: Int                 -- Next available variable register
+    varMap :: Map.Map String String,  -- Mapeia variáveis para registos ou localizações memória
+    nextStackOffset :: Int,            -- Próximo offset disponível na stack
+    stringLiterals :: [(String, String)], -- Literais string e suas labels
+    nextVarReg :: Int                 -- Próximo registo de variável disponível
 } deriving (Show)
 
--- Initial MIPS state
+-- Estado MIPS inicial
 initMIPSState :: MIPSState
 initMIPSState = MIPSState Map.empty 0 [] 0
 
--- Generate MIPS code from TAC
-generateMIPS :: [TAC] -> String
-generateMIPS tacs = 
+-- Gerar código MIPS a partir de TAC
+-- (Prática 6, Q4: "printMIPS que imprime... código MIPS")
+printMIPS :: [Instr] -> String
+printMIPS tacs = 
     let (dataSection, state) = extractStrings tacs initMIPSState
         state' = allocateVars tacs state
-        textSection = generateMIPSText tacs state'
+        textSection = printMIPSText tacs state'
     in mipsPreamble ++ dataSection ++ "\n.text\n.globl main\nmain:\n" ++ textSection ++ mipsPostamble
 
--- Allocate registers for all variables used in TAC
-allocateVars :: [TAC] -> MIPSState -> MIPSState
+-- Alocar registos para todas as variáveis usadas no TAC
+allocateVars :: [Instr] -> MIPSState -> MIPSState
 allocateVars tacs state = foldl allocateVar state (collectVars tacs)
   where
-    collectVars :: [TAC] -> [String]
+    collectVars :: [Instr] -> [String]
     collectVars = nub . concatMap getVarsFromTAC
     
     getVarsFromTAC (Assign dest src) = [dest | not (isTemp dest)] ++ [src | isVar src]
@@ -64,8 +86,8 @@ allocateVars tacs state = foldl allocateVar state (collectVars tacs)
     isPrefixOf _ [] = False
     isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
--- Extract string literals for .data section
-extractStrings :: [TAC] -> MIPSState -> (String, MIPSState)
+-- Extrair literais string para a seção .data
+extractStrings :: [Instr] -> MIPSState -> (String, MIPSState)
 extractStrings tacs state = 
     let strings = collectStrings tacs [] 0
         dataSection = if null strings 
@@ -93,31 +115,32 @@ extractStrings tacs state =
     isStringLiteral s = not (null s) && head s == '"' && last s == '"'
 
 -- Generate MIPS code for TAC instructions
-generateMIPSText :: [TAC] -> MIPSState -> String
-generateMIPSText tacs state = intercalate "\n" (map (generateMIPSInstr state) tacs)
+printMIPSText :: [Instr] -> MIPSState -> String
+printMIPSText tacs state = intercalate "\n" (map (printMIPSInstr state) tacs)
 
--- Generate MIPS instruction from a single TAC instruction
-generateMIPSInstr :: MIPSState -> TAC -> String
+-- Generate MIPS instruction from a single Instr instruction
+printMIPSInstr :: MIPSState -> Instr -> String
 
-generateMIPSInstr state (Label lbl) = lbl ++ ":"
+printMIPSInstr state (Label lbl) = lbl ++ ":"
 
-generateMIPSInstr state (Goto lbl) = "  j " ++ lbl
+printMIPSInstr state (Goto lbl) = "  j " ++ lbl
 
-generateMIPSInstr state (Ifz cond lbl) = 
+printMIPSInstr state (Ifz cond lbl) = 
     let reg = getRegister cond state
     in "  beqz " ++ reg ++ ", " ++ lbl
 
-generateMIPSInstr state (Assign dest src) =
+printMIPSInstr state (Assign dest src) =
     let destReg = getRegister dest state
         srcReg = getRegister src state
     in if isImmediate src
        then "  li " ++ destReg ++ ", " ++ src
        else "  move " ++ destReg ++ ", " ++ srcReg
 
-generateMIPSInstr state (BinOp dest src1 src2 op) =
+printMIPSInstr state (BinOp dest src1 src2 op) =
     let destReg = getRegister dest state
     in case op of
         "Add" -> 
+            -- Constant folding optimization
             if isImmediate src1 && isImmediate src2
             then let result = show ((read src1 :: Int) + (read src2 :: Int))
                  in "  li " ++ destReg ++ ", " ++ result
@@ -127,6 +150,7 @@ generateMIPSInstr state (BinOp dest src1 src2 op) =
             then "  addi " ++ destReg ++ ", " ++ getRegOrImm src2 state ++ ", " ++ src1
             else "  add " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         "Sub" -> 
+            -- Constant folding optimization
             if isImmediate src1 && isImmediate src2
             then let result = show ((read src1 :: Int) - (read src2 :: Int))
                  in "  li " ++ destReg ++ ", " ++ result
@@ -193,7 +217,7 @@ generateMIPSInstr state (BinOp dest src1 src2 op) =
             else "  sge " ++ destReg ++ ", " ++ getRegOrImm src1 state ++ ", " ++ getRegOrImm src2 state
         _ -> "  # Unknown operation: " ++ op
 
-generateMIPSInstr state (UnOp dest src op) =
+printMIPSInstr state (UnOp dest src op) =
     let destReg = getRegister dest state
         srcReg = getRegister src state
     in case op of
