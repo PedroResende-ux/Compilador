@@ -40,8 +40,7 @@ data MIPSState = MIPSState {
 initMIPSState :: MIPSState
 initMIPSState = MIPSState Map.empty 0 [] 0
 
--- Gerar código MIPS a partir de TAC
--- (Prática 6, Q4: "printMIPS que imprime... código MIPS")
+-- Gera código MIPS a partir de TAC
 printMIPS :: [Instr] -> String
 printMIPS tacs = 
     let (dataSection, state) = extractStrings tacs initMIPSState
