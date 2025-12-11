@@ -1,26 +1,36 @@
 -- Semantic.hs
--- Semantic analysis for the Ada subset compiler
+-- Análise semântica para o compilador do subconjunto de Ada
+--
+-- Realiza verificações semânticas:
+--   - Variáveis devem ser declaradas antes do uso
+--   - Sem redeclarações no mesmo escopo
+--   - Escopos aninhados corretamente (blocos)
+--
+-- Retorna SemanticResult com:
+--   - errors: Lista de erros semânticos encontrados
+--   - warnings: Lista de avisos (atualmente não utilizado)
+--   - symbolTable: Estado final da tabela de símbolos
 
 module Semantic where
 
 import AST
 import qualified Data.Map as Map
 
--- Result type for semantic analysis
+-- Resultado da análise semântica
 data SemanticResult = SemanticResult
-  { errors :: [String]
-  , warnings :: [String]
-  , symbolTable :: SymbolTable
+  { errors :: [String]       -- Erros encontrados
+  , warnings :: [String]     -- Avisos (preparado para futuro)
+  , symbolTable :: SymbolTable  -- Tabela de símbolos final
   }
   deriving (Show)
 
--- Perform semantic analysis on a program
+-- Realizar análise semântica num programa
 analyzeProgram :: Program -> SemanticResult
 analyzeProgram (Program decls stmts) =
   let initialST = emptySymbolTable
-      -- Process declarations first
+      -- Processar declarações primeiro
       (declErrors, stAfterDecls) = processDeclarations decls initialST
-      -- Check statements for undeclared variables
+      -- Verificar comandos para variáveis não declaradas
       stmtErrors = checkStatements stmts stAfterDecls
   in SemanticResult 
      { errors = declErrors ++ stmtErrors
@@ -28,7 +38,8 @@ analyzeProgram (Program decls stmts) =
      , symbolTable = stAfterDecls
      }
 
--- Process all declarations and check for redeclarations
+-- Processar todas as declarações e verificar redeclarações
+-- (Aula 8: processo de inserção com verificação)
 processDeclarations :: [Decl] -> SymbolTable -> ([String], SymbolTable)
 processDeclarations [] st = ([], st)
 processDeclarations (VarDecl name typ : rest) st =
@@ -39,10 +50,11 @@ processDeclarations (VarDecl name typ : rest) st =
       in (errorMsg : errs, finalST)
     Just newST -> processDeclarations rest newST
 
--- Check statements for undeclared variables
+-- Verificar comandos para variáveis não declaradas
 checkStatements :: [Stmt] -> SymbolTable -> [String]
 checkStatements stmts st = concatMap (checkStmt st) stmts
 
+-- Verificar um comando (recursão sobre statements)
 checkStmt :: SymbolTable -> Stmt -> [String]
 checkStmt st stmt = case stmt of
   Assignment var expr ->
@@ -62,7 +74,7 @@ checkStmt st stmt = case stmt of
     checkExpr st cond ++ checkStmt st body
   
   Block stmts ->
-    -- Enter new scope for block
+    -- Entrar num novo âmbito para o bloco
     let stInBlock = enterScope st
         blockErrors = checkStatements stmts stInBlock
     in blockErrors
@@ -72,7 +84,7 @@ checkStmt st stmt = case stmt of
   
   EmptyStmt -> []
 
--- Check expressions for undeclared variables
+-- Verificar expressões para variáveis não declaradas (recursão sobre expressões)
 checkExpr :: SymbolTable -> Expr -> [String]
 checkExpr st expr = case expr of
   Var v -> 
@@ -80,6 +92,7 @@ checkExpr st expr = case expr of
     then []
     else ["Error: Variable '" ++ v ++ "' used but not declared"]
   
+  -- Operações binárias: verificar ambos os operandos
   Add e1 e2 -> checkExpr st e1 ++ checkExpr st e2
   Sub e1 e2 -> checkExpr st e1 ++ checkExpr st e2
   Mul e1 e2 -> checkExpr st e1 ++ checkExpr st e2

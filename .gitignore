@@ -1,26 +1,39 @@
-# Auto-generated parser and lexer files
-Lexer.hs
-Parser.hs
-Parser.info
-
-# Haskell build artifacts
+# Build artifacts (pasta lixo/)
+lixo/
 *.hi
 *.o
 *.dyn_hi
 *.dyn_o
-
-# Compiled executable
+Lexer.hs
+Parser.hs
+Parser.info
 compilador
 
-# Generated assembly files
+# Generated MIPS files
 *.asm
 
-# Dist directories
+# Submission folder (temporário)
+ferramentas/*.zip
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+
+# Editor files
+*~
+*.swp
+*.swo
+
+# Haskell
+dist/
+dist-*
 .dist
 .dist-newstyle
-
-# Stack build artifacts
-.stack-work
-
-# Cabal build artifacts
+.stack-work/
 cabal.project.local
+
+# Temporary files
+*.tmp
+*.bak
+*.log

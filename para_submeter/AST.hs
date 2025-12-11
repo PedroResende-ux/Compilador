@@ -1,5 +1,21 @@
 -- AST.hs
--- Definição da Árvore Sintática Abstrata para o subconjunto de Ada
+-- Definição da árvore sintática abstrata para o subconjunto de Ada
+--
+-- Implementa:
+--   - Tipos de dados da AST para comandos e expressões
+--   - Tabela de símbolos com gestão de escopos
+--   - Sistema de tipos (Integer, Boolean)
+--   - Tipos de dados para código de três endereços (TAC)
+--
+-- Operações da Tabela de Símbolos:
+--   - emptySymbolTable: Inicializar tabela vazia
+--   - insertSymbol: Adicionar símbolo ao escopo atual
+--   - lookupSymbol: Procurar símbolo em todos os escopos
+--   - enterScope: Entrar num novo bloco de escopo
+--   - exitScope: Sair do escopo atual
+--   - isDeclared: Verificar se variável está declarada
+--
+-- Implementação usa Data.Map para operações eficientes O(log n).
 
 module AST where
 
@@ -78,47 +94,53 @@ data Expr =
   | GetLine                            -- Get_Line
   deriving (Show, Eq)
 
---TAC
+-- Código de Três Endereços (TAC)
+-- Usado como representação intermédia entre AST e MIPS
 
-data TAC =
-    Assign String String                   -- x := y (Direct Assignment)
-  | BinOp String String String String      -- x := y op z (e.g., "Add", "Sub")
-  | UnOp String String String              -- x := op y (e.g., "Neg")
-  | Goto String                            -- goto label
-  | Ifz String String                      -- ifz x goto label (Conditional Jump)
-  | Label String                           -- label: (Control Flow Marker)
+data Instr =
+    Assign String String                   -- x := y (atribuição direta)
+  | BinOp String String String String      -- x := y op z (ex: "Add", "Sub", "Mul")
+  | UnOp String String String              -- x := op y (ex: "Neg", "Not")
+  | Goto String                            -- Salto incondicional: goto label
+  | Ifz String String                      -- Salto condicional: ifz var label
+  | Label String                           -- Marcador de rótulo para saltos
   deriving (Show, Eq)
 
--- Symbol Table Operations
+-- Operações sobre a Tabela de Símbolos
 
--- Create an empty symbol table
+-- Criar uma tabela de símbolos vazia
+-- (Aula 8: "inicializar uma tabela vazia")
 emptySymbolTable :: SymbolTable
 emptySymbolTable = SymbolTable [Map.empty] 0
 
--- Enter a new scope (e.g., begin block)
+-- Entrar num novo âmbito/scope (ex: bloco begin)
+-- (Aula 8: "abrir - iniciar num novo âmbito")
 enterScope :: SymbolTable -> SymbolTable
 enterScope (SymbolTable scopes level) = 
   SymbolTable (Map.empty : scopes) (level + 1)
 
--- Exit current scope (e.g., end block)
+-- Sair do âmbito atual (ex: bloco end)
+-- (Aula 8: "fechar - terminar o âmbito atual")
 exitScope :: SymbolTable -> SymbolTable
 exitScope (SymbolTable [] _) = error "Cannot exit global scope - symbol table corrupted"
 exitScope (SymbolTable [_] 0) = error "Cannot exit global scope"
 exitScope (SymbolTable (_:rest) level) = 
   SymbolTable rest (level - 1)
 
--- Insert a symbol into the current scope
--- Returns Nothing if symbol already exists in current scope, Just table otherwise
+-- Inserir um símbolo no âmbito atual
+-- (Aula 8: "inserir dado o identificador e informação")
+-- Retorna Nothing se símbolo já existe no âmbito atual, Just table caso contrário
 insertSymbol :: String -> Type -> SymbolTable -> Maybe SymbolTable
 insertSymbol _ _ (SymbolTable [] _) = error "Cannot insert into empty symbol table"
 insertSymbol name typ (SymbolTable (currentScope:rest) level) =
   if Map.member name currentScope
-  then Nothing  -- Symbol already declared in current scope
+  then Nothing  -- Símbolo já declarado no âmbito atual
   else let info = SymbolInfo name typ level
            newScope = Map.insert name info currentScope
        in Just (SymbolTable (newScope:rest) level)
 
--- Lookup a symbol in all scopes (search from current to global)
+-- Procurar um símbolo em todos os âmbitos (do atual ao global)
+-- (Aula 8: "procurar dado o identificador" - menciona "lookup")
 lookupSymbol :: String -> SymbolTable -> Maybe SymbolInfo
 lookupSymbol name (SymbolTable scopes _) = 
   lookupInScopes name scopes
@@ -130,6 +152,6 @@ lookupSymbol name (SymbolTable scopes _) =
         Just info -> Just info
         Nothing -> lookupInScopes n ss
 
--- Check if symbol is declared
+-- Verificar se símbolo está declarado (função auxiliar baseada em lookupSymbol)
 isDeclared :: String -> SymbolTable -> Bool
 isDeclared name st = isJust (lookupSymbol name st)

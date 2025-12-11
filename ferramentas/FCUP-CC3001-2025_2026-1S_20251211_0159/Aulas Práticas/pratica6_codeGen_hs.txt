@@ -1,0 +1,91 @@
+============================================================
+Geração de código
+============================================================
+
+O objectivo desta aula é implementar um gerador de código para expressões aritméticas.
+O input é uma estrutura Expr do primeiro trabalho prático, adaptado de forma a lidar só com expressões aritméticas ( a variável root será de tipo Expr)
+
+============================================================
+1. Baseado no primeiro trabalho crie um novo projeto para construir a árvore abstracta só de expressões aritméticas sem variáveis.
+
+
+============================================================
+2. 
+
+a) Defina um data (Instr) em Haskell para representar um código intermédio de três endereços definido por: : 
+
+instruction -> VAR := atom | VAR := atom binop atom 
+
+atom -> VAR
+atom -> NUMBER
+
+binop -> PLUS | MINUS | DIV | MULT
+
+
+
+============================================================
+3. Defina em Haskell um compilador da árvore abstracta para expressões para uma lista de instruções [Instr].
+
+Uma sugestão de tipo para a função que compila expressões é:
+
+compileExpr :: Expr -> ([Instr], Temp) onde Temp é o registo onde está o valor da avaliação da expressão na lista de instruções [Instr]. Por exemplo:
+
+O resultado da compilação da expressão: x - 2*5 é a lista de instruções:
+
+t1 := x;
+t2 := 2;
+t3 := 5;
+t4 := t1*t2;
+t5 := t1 - t4;
+
+e neste caso o registo onde está o resultado é igual a t5.
+
+
+============================================================
+4. Defina em Haskell uma função printMIPS que imprime num ficheiro o código MIPS correspondente à lista de instruções gerada pelo compilador.
+
+Referência para a pergunta 4: https://www2.cs.arizona.edu/~debray/Teaching/CSc453/DOCS/3addr2spim.pdf
+
+=============================================================
+
+5. Repita todas as perguntas anteriores para comandos. Neste caso o código intermédio é definido por:
+
+instruction -> VAR := atom 
+instruction -> VAR := atom binop atom
+instruction -> GOTO label
+instruction -> IF VAR relop atom THEN label ELSE label
+instruction -> LAB label
+
+atom -> VAR
+atom -> NUMBER
+
+label -> LAB_ID
+
+binop -> PLUS | MINUS | DIV | MULT
+relop -> EQUAL | DIF | LESS | GT | LE | GE
+
+Para compilar comandos é necessário ter outra função de compilação de expressões booleanas com tipo:
+
+compileBool :: ExprBool -> ([Instr], Label, Label)
+
+
+onde as duas labels são as labels para onde a execução do programa em código intermédio deverá ir conforme a compilação da expressão booleana seja respectivamente True ou False. 
+
+A função de compilação de comandos (que chama as função de compilação de expressões aritméticas e booleanas) terá tipo:
+
+compileCmd :: Cmd -> [Instr] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
