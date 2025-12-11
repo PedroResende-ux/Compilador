@@ -52,46 +52,46 @@ data Decl = VarDecl String Type
 
 -- Comandos (Statements)
 data Stmt = 
-    Assignment String Expr              -- x := expr
-  | IfThenElse Expr Stmt Stmt          -- if expr then stmt else stmt
-  | IfThen Expr Stmt                   -- if expr then stmt (sem else)
-  | While Expr Stmt                    -- while expr loop stmt end loop
-  | Block [Stmt]                       -- begin stmt1; stmt2; ... end
-  | PutLine Expr                       -- Put_Line(expr)
-  | EmptyStmt                          -- comando vazio
+    Assignment String Expr
+  | IfThenElse Expr Stmt Stmt
+  | IfThen Expr Stmt
+  | While Expr Stmt
+  | Block [Stmt]
+  | PutLine Expr
+  | EmptyStmt
   deriving (Show, Eq)
 
 -- Expressões
 data Expr = 
     -- Literais
-    IntLit Int                         -- 42
-  | BoolLit Bool                       -- True, False
-  | StringLit String                   -- "texto"
-  | Var String                         -- identificador
+    IntLit Int
+  | BoolLit Bool
+  | StringLit String
+  | Var String
     
     -- Operações aritméticas
-  | Add Expr Expr                      -- e1 + e2
-  | Sub Expr Expr                      -- e1 - e2
-  | Mul Expr Expr                      -- e1 * e2
-  | Div Expr Expr                      -- e1 / e2
-  | Mod Expr Expr                      -- e1 mod e2
-  | Neg Expr                           -- -e
+  | Add Expr Expr
+  | Sub Expr Expr
+  | Mul Expr Expr
+  | Div Expr Expr
+  | Mod Expr Expr
+  | Neg Expr
     
     -- Operações booleanas
-  | And Expr Expr                      -- e1 and e2
-  | Or Expr Expr                       -- e1 or e2
-  | Not Expr                           -- not e
+  | And Expr Expr
+  | Or Expr Expr
+  | Not Expr
     
     -- Operações relacionais
-  | Eq Expr Expr                       -- e1 = e2
-  | Neq Expr Expr                      -- e1 /= e2
-  | Lt Expr Expr                       -- e1 < e2
-  | Lte Expr Expr                      -- e1 <= e2
-  | Gt Expr Expr                       -- e1 > e2
-  | Gte Expr Expr                      -- e1 >= e2
+  | Eq Expr Expr
+  | Neq Expr Expr
+  | Lt Expr Expr
+  | Lte Expr Expr
+  | Gt Expr Expr
+  | Gte Expr Expr
     
     -- Input
-  | GetLine                            -- Get_Line
+  | GetLine
   deriving (Show, Eq)
 
 -- Código de Três Endereços (TAC)
