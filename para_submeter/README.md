@@ -239,6 +239,17 @@ main:
 
 ## Testes Incluídos
 
+Os ficheiros em `testes/` cobrem casos de sucesso e de erro semântico. Resumo:
+
+- `test_comprehensive.ada`: cobre operações aritméticas/booleanas, relacionais, condicionais, ciclos e prints.
+- `test_declarations.ada`: declarações e uso correto de variáveis; valida a tabela de símbolos.
+- `test_nested_scope.ada`: escopos aninhados com entrada/saída de bloco.
+- `test_arithmetic_decl.ada`: operações aritméticas com variáveis declaradas.
+- `test_undeclared.ada`: erro por uso de variável não declarada.
+- `test_redeclaration.ada`: erro por redeclaração no mesmo escopo.
+- `test_comprehensive_pr2.ada`: foco na Parte 2 (TAC/MIPS, prints e controlo de fluxo).
+- `demo_integration.ada`: programa pequeno para gerar `.asm` rapidamente e testar no MARS.
+
 ### Testes de Sucesso:
 - `test_comprehensive.ada` - Programa completo com todas as funcionalidades
 - `test_declarations.ada` - Declarações de variáveis
